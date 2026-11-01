@@ -1,5 +1,16 @@
 <template>
+  <IconifyIcon
+    v-if="isMdiIcon && mdiIconsReady"
+    :icon="props.name"
+    :class="svgClass"
+    :width="iconSize"
+    :height="iconSize"
+    aria-hidden="true"
+    v-bind="$attrs"
+    :style="{ color, fill: color, width: iconSize, height: iconSize }"
+  />
   <svg
+    v-else-if="!isMdiIcon"
     aria-hidden="true"
     :class="svgClass"
     v-bind="$attrs"
@@ -10,6 +21,9 @@
 </template>
 
 <script setup lang="ts">
+import { Icon as IconifyIcon } from '@iconify/vue'
+import { loadMdiIconNames } from '@/utils/iconify'
+
 defineOptions({ name: 'GiSvgIcon' })
 
 const props = withDefaults(defineProps<Props>(), {
@@ -24,6 +38,22 @@ interface Props {
   size?: string | number
 }
 
+const isMdiIcon = computed(() => props.name.startsWith('mdi:'))
+const mdiIconsReady = ref(false)
+
+watch(isMdiIcon, (enabled) => {
+  mdiIconsReady.value = false
+  if (!enabled) return
+  void loadMdiIconNames().then(
+    () => {
+      mdiIconsReady.value = true
+    },
+    () => {
+      mdiIconsReady.value = false
+    },
+  )
+}, { immediate: true })
+
 // 判断传入的值，是否带有单位，如果没有，就默认用px单位
 const getUnitValue = (value: string | number): string | number => {
   return /(px|em|rem|%)$/.test(value.toString()) ? value : `${value}px`
@@ -36,7 +66,7 @@ const iconSize = computed<string | number>(() => {
 const iconName = computed(() => `#icon-${props.name}`)
 
 const svgClass = computed(() => {
-  if (props.name) return `svg-icon icon-${props.name}`
+  if (props.name) return `svg-icon icon-${props.name.replace(':', '-')}`
   return 'svg-icon'
 })
 </script>

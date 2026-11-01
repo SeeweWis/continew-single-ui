@@ -1,5 +1,5 @@
 <template>
-  <a-popover trigger="click">
+  <a-popover v-model:popup-visible="popupVisible" trigger="click">
     <a-input
       placeholder="请选择图标"
       :model-value="modelValue"
@@ -8,24 +8,20 @@
       @clear="emit('update:modelValue', '')"
     >
       <template #prefix>
-        <template v-if="modelValue">
-          <GiSvgIcon v-if="modelValue" :size="16" :name="modelValue" />
-        </template>
+        <GiSvgIcon v-if="modelValue" :size="16" :name="modelValue" />
         <icon-search v-else />
       </template>
     </a-input>
 
     <template #content>
       <div class="container" :class="{ 'is-list': !isGridView }">
-        <a-row>
-          <section style="flex: 1; margin-right: 8px">
+        <a-row align="center">
+          <section class="search-input">
             <a-input
               v-model="searchValue"
-              placeholder="搜索图标名称"
+              placeholder="搜索 MDI 图标名称"
               allow-clear
               size="small"
-              @input="search"
-              @clear="search"
             >
               <template #prefix>
                 <icon-search />
@@ -33,7 +29,7 @@
             </a-input>
           </section>
 
-          <a-button size="small" @click="isGridView = !isGridView">
+          <a-button size="small" title="切换图标布局" @click="isGridView = !isGridView">
             <template #icon>
               <icon-apps v-if="isGridView" />
               <icon-unordered-list v-else />
@@ -41,34 +37,48 @@
           </a-button>
         </a-row>
 
-        <section class="icon-list">
-          <a-row wrap :gutter="4">
-            <a-col v-for="item of currentPageIconList" :key="item" :span="isGridView ? 4 : 8">
-              <div class="icon-item" :class="{ active: modelValue === item }" @click="handleSelectedIcon(item)">
-                <GiSvgIcon :name="item" :size="20"></GiSvgIcon>
-                <div class="gi_line_1 icon-name">{{ item }}</div>
-              </div>
-            </a-col>
-          </a-row>
-        </section>
+        <a-spin :loading="isLoading">
+          <section class="icon-list">
+            <a-row v-if="currentPageIconList.length" wrap :gutter="4">
+              <a-col v-for="item of currentPageIconList" :key="item" :span="isGridView ? 4 : 8">
+                <button
+                  type="button"
+                  class="icon-item"
+                  :class="{ active: modelValue === item }"
+                  :aria-label="item"
+                  :title="item"
+                  @click="handleSelectedIcon(item)"
+                >
+                  <IconifyIcon :icon="item" :width="20" :height="20" aria-hidden="true" />
+                  <div class="gi_line_1 icon-name">{{ item }}</div>
+                </button>
+              </a-col>
+            </a-row>
+            <a-empty v-else-if="iconList.length && !filteredIconList.length" />
+          </section>
+        </a-spin>
 
-        <a-row justify="center" align="center">
+        <a-row v-if="total" justify="center" align="center">
           <a-pagination
+            :current="current"
             size="mini"
             :page-size="pageSize"
             :total="total"
             :show-size-changer="false"
             @change="onPageChange"
-          ></a-pagination>
+          />
         </a-row>
+        <div v-if="iconList.length" class="icon-count">共 {{ iconList.length.toLocaleString() }} 个图标</div>
       </div>
     </template>
   </a-popover>
 </template>
 
 <script setup lang="ts">
-import { useClipboard } from '@vueuse/core'
 import { Message } from '@arco-design/web-vue'
+import { useClipboard } from '@vueuse/core'
+import { Icon as IconifyIcon } from '@iconify/vue'
+import { loadMdiIconNames } from '@/utils/iconify'
 
 defineOptions({ name: 'GiIconSelector' })
 
@@ -79,71 +89,60 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits(['select', 'update:modelValue'])
 
-// 自定义图标模块
-const SvgIconModules = import.meta.glob('@/assets/icons/*.svg')
-
 interface Props {
   modelValue?: string
   enableCopy?: boolean
 }
 
-const searchValue = ref('') // 搜索词
-
-// 图标列表
+const popupVisible = ref(false)
+const searchValue = ref('')
 const isGridView = ref(false)
-
-const iconList: string[] = []
-for (const path in SvgIconModules) {
-  const name = path.replace('/src/assets/icons/', '').replace('.svg', '')
-  iconList.push(name)
-}
-
-const pageSize = 42
+const isLoading = ref(false)
+const iconList = ref<string[]>([])
 const current = ref(1)
-const total = ref(iconList.length) // 图标总数
+const pageSize = 42
 
-// 当前页的图标列表
-const currentPageIconList = ref(iconList.slice(0, pageSize))
-// 搜索列表
-const searchList = ref<string[]>([])
+const filteredIconList = computed(() => {
+  const keyword = searchValue.value.trim().toLowerCase().replace(/^mdi:/, '')
+  if (!keyword) return iconList.value
+  return iconList.value.filter((icon) => icon.slice(4).toLowerCase().includes(keyword))
+})
 
-// 页码改变
+const total = computed(() => filteredIconList.value.length)
+const currentPageIconList = computed(() => {
+  const start = (current.value - 1) * pageSize
+  return filteredIconList.value.slice(start, start + pageSize)
+})
+
+watch(searchValue, () => {
+  current.value = 1
+})
+
+watch(popupVisible, async (visible) => {
+  if (!visible || iconList.value.length || isLoading.value) return
+  isLoading.value = true
+  try {
+    iconList.value = await loadMdiIconNames()
+  } catch {
+    Message.error('MDI 图标集加载失败')
+  } finally {
+    isLoading.value = false
+  }
+})
+
 const onPageChange = (page: number) => {
   current.value = page
-  if (!searchList.value.length) {
-    currentPageIconList.value = iconList.slice((page - 1) * pageSize, page * pageSize)
-  } else {
-    currentPageIconList.value = searchList.value.slice((page - 1) * pageSize, page * pageSize)
-  }
 }
 
-// 搜索
-const search = () => {
-  if (searchValue.value) {
-    const temp = searchValue.value.toLowerCase()
-    searchList.value = iconList.filter((item) => {
-      return item.toLowerCase().includes((temp))
-    })
-    total.value = searchList.value.length
-    currentPageIconList.value = searchList.value.slice(0, pageSize)
-  } else {
-    searchList.value = []
-    total.value = iconList.length
-    currentPageIconList.value = iconList.slice((current.value - 1) * pageSize, current.value * pageSize)
-  }
-}
-
-// 点击选择图标
 const handleSelectedIcon = async (icon: string) => {
   emit('select', icon)
   emit('update:modelValue', icon)
+  popupVisible.value = false
   if (props.enableCopy) {
-    const { isSupported, copied, copy } = useClipboard()
+    const { isSupported, copy } = useClipboard()
     if (isSupported) {
-      await copy(`<${icon} />`)
-      if (copied) {
-        Message.success(`已选择并且复制成功 ${icon} 图标`)
-      }
+      await copy(`<Icon icon="${icon}" />`)
+      Message.success(`已选择并复制 ${icon}`)
     }
   }
 }
@@ -151,56 +150,77 @@ const handleSelectedIcon = async (icon: string) => {
 
 <style scoped lang="scss">
 .container {
-  width: 300px;
+  width: 320px;
+  max-width: calc(100vw - 48px);
   overflow: hidden;
+
+  .search-input {
+    flex: 1;
+    margin-right: 8px;
+  }
+
   .icon-list {
+    height: 300px;
     margin-top: 10px;
     margin-bottom: 10px;
+    overflow: auto;
+
     .icon-item {
-      height: 30px;
-      margin-bottom: 4px;
-      overflow: hidden;
       display: flex;
-      flex-direction: column;
-      justify-content: center;
+      width: 100%;
+      height: 38px;
+      margin-bottom: 4px;
+      padding: 0;
       align-items: center;
+      justify-content: center;
+      overflow: hidden;
       cursor: pointer;
       border: 1px dashed var(--color-bg-1);
+      background: transparent;
+      color: var(--color-text-1);
+
       .icon-name {
         display: none;
       }
+
       &.active {
-        border: 1px dashed rgb(var(--primary-3));
+        border-color: rgb(var(--primary-3));
         background-color: rgba(var(--primary-6), 0.05);
       }
 
-      &:not(.active) {
-        &:hover {
-          border-color: var(--color-border-3);
-        }
+      &:not(.active):hover {
+        border-color: var(--color-border-3);
+      }
+
+      &:focus-visible {
+        outline: 2px solid rgb(var(--primary-6));
+        outline-offset: -2px;
       }
     }
+  }
+
+  .icon-count {
+    margin-top: 6px;
+    color: var(--color-text-3);
+    font-size: 12px;
+    text-align: center;
   }
 }
 
 .is-list {
   min-width: 400px;
+
   .icon-list {
-    height: 300px;
-    overflow: hidden;
-    overflow-y: auto;
     .icon-item {
-      display: flex;
-      flex-direction: row;
       justify-content: flex-start;
-      align-items: center;
-      padding-left: 4px;
-      box-sizing: border-box;
+      padding-left: 8px;
+
       .icon-name {
-        margin-left: 6px;
-        font-size: 12px;
-        color: var(--color-text-2);
         display: block;
+        margin-left: 6px;
+        color: var(--color-text-2);
+        font-size: 12px;
+        text-align: left;
       }
     }
   }

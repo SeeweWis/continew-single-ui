@@ -1,7 +1,6 @@
 import axios from 'axios'
 import qs from 'query-string'
 import type { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
-import { useTenantStore } from '@/stores/modules/tenant'
 import { useUserStore } from '@/stores'
 import {
   clearAccessToken,
@@ -53,7 +52,6 @@ interface RefreshableRequestConfig extends AxiosRequestConfig {
 
 interface AccessTokenResp {
   accessToken?: string
-  tenantId?: string | number | null
 }
 
 // 单例 Promise 让同一时间的多个 401 请求共用一次刷新，避免 Refresh Token 被并发轮换。
@@ -65,16 +63,6 @@ const isAuthEndpoint = (url?: string) => {
   return url.endsWith('/auth/login') || url.endsWith('/auth/refresh') || url.endsWith('/auth/logout')
 }
 
-// 账号类登录以显式租户编码为准；社交登录回调没有租户编码，必须保留授权前选择的
-// 租户 ID。刷新和退出始终以服务端 Refresh Session 为准。
-const isTenantIndependentAuthEndpoint = (config: AxiosRequestConfig) => {
-  const url = config.url
-  if (url?.endsWith('/auth/refresh') || url?.endsWith('/auth/logout')) return true
-  if (!url?.endsWith('/auth/login')) return false
-  const data = config.data
-  return typeof data !== 'object' || data?.authType !== 'SOCIAL'
-}
-
 const showReLogin = async (failedGeneration: number, message?: string) => {
   let clearedGeneration: number | undefined
   let redirectPath: string | undefined
@@ -84,7 +72,7 @@ const showReLogin = async (failedGeneration: number, message?: string) => {
     authFailureShown = true
     clearAccessToken()
     redirectPath = router.currentRoute.value.fullPath
-    // 已确认当前登录态失效时立即清理持久化的角色、权限、租户和动态路由，避免
+    // 已确认当前登录态失效时立即清理持久化的角色、权限和动态路由，避免
     // 用户停留在弹窗期间仍看到上一会话的菜单。
     await useUserStore().logoutCallBack()
     clearedGeneration = getAuthGeneration()
@@ -127,8 +115,6 @@ const refreshAccessToken = () => {
       }
       // 同步 Pinia 中供页面展示使用的内存状态；HTTP 请求仍以本模块的单一令牌值为准。
       useUserStore().updateAccessToken(accessToken)
-      // 租户功能关闭或后端未返回租户时也要清除旧值，避免下一次开启租户功能后误用旧租户。
-      useTenantStore().setTenantId(response.data.data.tenantId)
       authFailureShown = false
       return accessToken
     })
@@ -235,15 +221,6 @@ http.interceptors.request.use(
     }
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`
-    }
-    const tenantStore = useTenantStore()
-    if (!isTenantIndependentAuthEndpoint(config)
-      && tenantStore.tenantEnabled && tenantStore.tenantId) {
-      config.headers['X-Tenant-Id'] = tenantStore.tenantId
-    } else {
-      // 重试请求会复用原 headers；认证接口或租户状态变化时必须删除旧租户 ID，
-      // 避免刷新/退出时把上一次会话的租户上下文带到服务端。
-      delete config.headers['X-Tenant-Id']
     }
     return refreshableConfig
   },

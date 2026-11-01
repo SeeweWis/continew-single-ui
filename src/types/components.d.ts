@@ -29,7 +29,6 @@ declare module 'vue' {
     GiForm: typeof import('./../components/GiForm/src/GiForm.vue')['default']
     GiIconBox: typeof import('./../components/GiIconBox/index.vue')['default']
     GiIconSelector: typeof import('./../components/GiIconSelector/index.vue')['default']
-    GiIframe: typeof import('./../components/GiIframe/index.vue')['default']
     GiOption: typeof import('./../components/GiOption/index.vue')['default']
     GiOptionItem: typeof import('./../components/GiOptionItem/index.vue')['default']
     GiPageLayout: typeof import('./../components/GiPageLayout/index.vue')['default']

@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { computed, reactive, ref } from 'vue'
-import { useTenantStore } from './tenant'
 import { resetRouter } from '@/router'
 import {
   type AccountLoginReq,
@@ -26,7 +25,6 @@ import { resetHasRouteFlag } from '@/router/guard'
 import { withAuthLifecycleLock } from '@/features/auth-session/lifecycle'
 
 const storeSetup = () => {
-  const tenantStore = useTenantStore()
   const userInfo = reactive<UserInfo>({
     id: '',
     username: '',
@@ -67,7 +65,6 @@ const storeSetup = () => {
 
   const saveLoginState = (data: LoginResp) => {
     updateAccessToken(data.accessToken)
-    tenantStore.setTenantId(data.tenantId)
   }
 
   // 页面重载后，使用浏览器自动携带的 HttpOnly Cookie 恢复短期 Access Token。
@@ -82,25 +79,25 @@ const storeSetup = () => {
   }
 
   // 登录
-  const accountLogin = async (req: AccountLoginReq, tenantCode?: string) => {
+  const accountLogin = async (req: AccountLoginReq) => {
     await withAuthLifecycleLock(async () => {
-      const res = await accountLoginApi({ ...req, clientId: import.meta.env.VITE_CLIENT_ID, authType: AuthTypeConstants.ACCOUNT }, tenantCode)
+      const res = await accountLoginApi({ ...req, clientId: import.meta.env.VITE_CLIENT_ID, authType: AuthTypeConstants.ACCOUNT })
       saveLoginState(res.data)
     })
   }
 
   // 邮箱登录
-  const emailLogin = async (req: EmailLoginReq, tenantCode?: string) => {
+  const emailLogin = async (req: EmailLoginReq) => {
     await withAuthLifecycleLock(async () => {
-      const res = await emailLoginApi({ ...req, clientId: import.meta.env.VITE_CLIENT_ID, authType: AuthTypeConstants.EMAIL }, tenantCode)
+      const res = await emailLoginApi({ ...req, clientId: import.meta.env.VITE_CLIENT_ID, authType: AuthTypeConstants.EMAIL })
       saveLoginState(res.data)
     })
   }
 
   // 手机号登录
-  const phoneLogin = async (req: PhoneLoginReq, tenantCode?: string) => {
+  const phoneLogin = async (req: PhoneLoginReq) => {
     await withAuthLifecycleLock(async () => {
-      const res = await phoneLoginApi({ ...req, clientId: import.meta.env.VITE_CLIENT_ID, authType: AuthTypeConstants.PHONE }, tenantCode)
+      const res = await phoneLoginApi({ ...req, clientId: import.meta.env.VITE_CLIENT_ID, authType: AuthTypeConstants.PHONE })
       saveLoginState(res.data)
     })
   }
@@ -120,7 +117,6 @@ const storeSetup = () => {
     pwdExpiredShow.value = true
     resetAccessToken()
     resetRouter()
-    tenantStore.resetTenantId()
   }
 
   // 退出登录

@@ -8,9 +8,6 @@
     size="large"
     @submit="handleLogin"
   >
-    <a-form-item v-if="tenantStore.needInputTenantCode" field="tenantCode" hide-label>
-      <a-input v-model="tenantCode" placeholder="请输入租户编码（不输入时为默认租户）" allow-clear />
-    </a-form-item>
     <a-form-item field="phone" hide-label>
       <a-input v-model="form.phone" placeholder="请输入手机号" :max-length="11" allow-clear />
     </a-form-item>
@@ -45,7 +42,7 @@
 import { type FormInstance, Message } from '@arco-design/web-vue'
 // import type { BehaviorCaptchaReq } from '@/apis'
 import { type BehaviorCaptchaReq, getSmsCaptcha } from '@/apis'
-import { useTabsStore, useTenantStore, useUserStore } from '@/stores'
+import { useTabsStore, useUserStore } from '@/stores'
 import * as Regexp from '@/utils/regexp'
 
 const formRef = ref<FormInstance>()
@@ -53,7 +50,6 @@ const form = reactive({
   phone: '',
   captcha: '',
 })
-const tenantCode = ref()
 
 const rules: FormInstance['rules'] = {
   phone: [
@@ -63,7 +59,6 @@ const rules: FormInstance['rules'] = {
   captcha: [{ required: true, message: '请输入验证码' }],
 }
 
-const tenantStore = useTenantStore()
 const userStore = useUserStore()
 const tabsStore = useTabsStore()
 const router = useRouter()
@@ -74,7 +69,7 @@ const handleLogin = async () => {
   if (isInvalid) return
   try {
     loading.value = true
-    await userStore.phoneLogin(form, tenantCode.value)
+    await userStore.phoneLogin(form)
     tabsStore.reset()
     const { redirect, ...othersQuery } = router.currentRoute.value.query
 

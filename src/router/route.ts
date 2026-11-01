@@ -16,19 +16,19 @@ export const systemRoutes: RouteRecordRaw[] = [
     name: 'Dashboard',
     component: Layout,
     redirect: '/dashboard/workplace',
-    meta: { title: '仪表盘', icon: 'dashboard', hidden: false },
+    meta: { title: '仪表盘', icon: 'mdi:view-dashboard', hidden: false },
     children: [
       {
         path: '/dashboard/workplace',
         name: 'Workplace',
         component: () => import('@/views/dashboard/workplace/index.vue'),
-        meta: { title: '工作台', icon: 'desktop', hidden: false, affix: true },
+        meta: { title: '工作台', icon: 'mdi:desktop-classic', hidden: false, affix: true },
       },
       {
         path: '/dashboard/analysis',
         name: 'Analysis',
         component: () => import('@/views/dashboard/analysis/index.vue'),
-        meta: { title: '分析页', icon: 'insert-chart', hidden: false },
+        meta: { title: '分析页', icon: 'mdi:chart-box-outline', hidden: false },
       },
     ],
   },
@@ -65,48 +65,6 @@ export const systemRoutes: RouteRecordRaw[] = [
         name: 'UserNotice',
         component: () => import('@/views/user/message/components/view/index.vue'),
         meta: { title: '查看公告' },
-      },
-    ],
-  },
-  {
-    path: '/about',
-    name: 'About',
-    component: Layout,
-    meta: { title: '关于项目', icon: 'apps', hidden: false, sort: 999 },
-    redirect: '/about/document/api',
-    children: [
-      {
-        path: '/about/document/api',
-        component: () => import('@/views/about/document/api/index.vue'),
-        meta: { title: '接口文档', icon: 'swagger', hidden: false, keepAlive: true },
-      },
-      {
-        path: '/about/document/changelog',
-        component: () => import('@/views/about/document/changelog/index.vue'),
-        meta: { title: '更新日志', icon: 'continew', hidden: false, keepAlive: true },
-      },
-      {
-        path: 'https://arco.design/vue/component/button',
-        meta: { title: 'Arco Design文档', icon: 'arco', hidden: false },
-      },
-      {
-        path: '/about/source',
-        name: 'AboutSource',
-        meta: { title: '开源地址', icon: 'github', hidden: false },
-        children: [
-          {
-            path: 'https://gitee.com/continew/continew-admin',
-            meta: { title: 'Gitee', icon: 'gitee', hidden: false },
-          },
-          {
-            path: 'https://atomgit.com/continew/continew-admin',
-            meta: { title: 'GitCode', icon: 'gitcode', hidden: false },
-          },
-          {
-            path: 'https://github.com/continew-org/continew-admin',
-            meta: { title: 'GitHub', icon: 'github', hidden: false },
-          },
-        ],
       },
     ],
   },

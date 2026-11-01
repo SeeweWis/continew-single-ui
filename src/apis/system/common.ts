@@ -17,8 +17,3 @@ export function listSiteOptionDict() {
 export function upload(data: FormData) {
   return http.post(`${BASE_URL}/file`, data)
 }
-
-/** @desc 查询租户开启状态 */
-export function getTenantStatus() {
-  return http.get<boolean>(`${BASE_URL}/dict/option/tenant`)
-}

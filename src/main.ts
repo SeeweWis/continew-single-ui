@@ -30,6 +30,10 @@ import pinia from '@/stores'
 // 对特定组件进行默认配置
 Card.props.bordered = false
 
+// Remove persisted tenant state and tenant-scoped routes from earlier versions.
+localStorage.removeItem('tenant')
+localStorage.removeItem('route')
+
 const app = createApp(App)
 Modal._context = app._context
 Drawer._context = app._context
